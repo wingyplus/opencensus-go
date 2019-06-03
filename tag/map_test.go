@@ -134,9 +134,7 @@ func TestNewMap(t *testing.T) {
 			name:    "from empty; invalid",
 			initial: nil,
 			mods: []Mutator{
-				Insert(k5, "v\x19"),
-				Upsert(k5, "v\x19"),
-				Update(k5, "v\x19"),
+				Insert(k5, strings.Repeat("x", 256)),
 			},
 			want: nil,
 		},
@@ -145,31 +143,33 @@ func TestNewMap(t *testing.T) {
 			initial: nil,
 			mods: []Mutator{
 				Insert(k5, "v1"),
-				Update(k5, "v\x19"),
+				Update(k5, strings.Repeat("x", 256)),
 			},
 			want: nil,
 		},
 	}
 
 	for _, tt := range tests {
-		mods := []Mutator{
-			Insert(k1, "v1"),
-			Insert(k2, "v2"),
-			Update(k3, "v3"),
-			Upsert(k4, "v4"),
-			Insert(k2, "v2"),
-			Delete(k1),
-		}
-		mods = append(mods, tt.mods...)
-		ctx := NewContext(context.Background(), tt.initial)
-		ctx, err := New(ctx, mods...)
-		if tt.want != nil && err != nil {
-			t.Errorf("%v: New = %v", tt.name, err)
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			mods := []Mutator{
+				Insert(k1, "v1"),
+				Insert(k2, "v2"),
+				Update(k3, "v3"),
+				Upsert(k4, "v4"),
+				Insert(k2, "v2"),
+				Delete(k1),
+			}
+			mods = append(mods, tt.mods...)
+			ctx := NewContext(context.Background(), tt.initial)
+			ctx, err := New(ctx, mods...)
+			if tt.want != nil && err != nil {
+				t.Errorf("New = %v", err)
+			}
 
-		if got, want := FromContext(ctx), tt.want; !reflect.DeepEqual(got, want) {
-			t.Errorf("%v: got %v; want %v", tt.name, got, want)
-		}
+			if got, want := FromContext(ctx), tt.want; !reflect.DeepEqual(got, want) {
+				t.Errorf("got %v; want %v", got, want)
+			}
+		})
 	}
 }
 
